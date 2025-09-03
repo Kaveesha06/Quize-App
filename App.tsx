@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
   SafeAreaView,
   StatusBar,
   StyleSheet,
-} from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+  ActivityIndicator,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 interface Question {
   id: number;
@@ -26,43 +28,90 @@ interface QuizResult {
 }
 
 export default function App() {
-  // Quiz states
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [quizHistory, setQuizHistory] = useState<QuizResult[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch questions from backend
-  useEffect(() => {
-    fetch("https://c16eaf7a8eb1.ngrok-free.app/Quize-jsp/Quections")
-      .then((res) => res.json())
-      .then((data: Question[]) => {
-        setQuestions(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching:", err);
-        setLoading(false);
-      });
-  }, []);
-
-  // Load quiz history on app start
+  // Load quiz history and questions when app starts
   useEffect(() => {
     loadQuizHistory();
+    fetchQuestions();
   }, []);
+
+  // Fetch questions from your Java servlet
+  const fetchQuestions = async () => {
+    try {
+      setLoading(true);
+      // CHANGE THIS URL to match your server
+      const response = await fetch('https://454c6606ccab.ngrok-free.app/Quize-jsp/Quection');
+      
+      if (response.ok) {
+        const data = await response.json();
+        setQuestions(data);
+      } else {
+        // If server fails, use sample questions
+        console.log('Server not available, using sample questions');
+        // setSampleQuestions();
+      }
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+      // If network fails, use sample questions
+      // setSampleQuestions();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // // Sample questions if server is not available
+  // const setSampleQuestions = () => {
+  //   const sampleQuestions: Question[] = [
+  //     {
+  //       id: 1,
+  //       question: "What is the capital of France?",
+  //       options: ["London", "Berlin", "Paris", "Madrid"],
+  //       correctAnswer: 2,
+  //     },
+  //     {
+  //       id: 2,
+  //       question: "Which planet is known as the Red Planet?",
+  //       options: ["Venus", "Mars", "Jupiter", "Saturn"],
+  //       correctAnswer: 1,
+  //     },
+  //     {
+  //       id: 3,
+  //       question: "What is 2 + 2?",
+  //       options: ["3", "4", "5", "6"],
+  //       correctAnswer: 1,
+  //     },
+  //     {
+  //       id: 4,
+  //       question: "Who painted the Mona Lisa?",
+  //       options: ["Van Gogh", "Picasso", "Leonardo da Vinci", "Michelangelo"],
+  //       correctAnswer: 2,
+  //     },
+  //     {
+  //       id: 5,
+  //       question: "What is the largest ocean on Earth?",
+  //       options: ["Atlantic", "Indian", "Arctic", "Pacific"],
+  //       correctAnswer: 3,
+  //     },
+  //   ];
+  //   setQuestions(sampleQuestions);
+  // };
 
   const loadQuizHistory = async () => {
     try {
-      const savedHistory = await AsyncStorage.getItem("quizHistory");
+      const savedHistory = await AsyncStorage.getItem('quizHistory');
       if (savedHistory) {
         setQuizHistory(JSON.parse(savedHistory));
       }
     } catch (error) {
-      console.error("Error loading quiz history:", error);
+      console.error('Error loading quiz history:', error);
     }
   };
 
@@ -74,21 +123,22 @@ export default function App() {
         totalQuestions: questions.length,
         date: new Date().toLocaleDateString(),
       };
+
       const updatedHistory = [...quizHistory, newResult];
-      await AsyncStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
+      await AsyncStorage.setItem('quizHistory', JSON.stringify(updatedHistory));
       setQuizHistory(updatedHistory);
     } catch (error) {
-      console.error("Error saving quiz result:", error);
+      console.error('Error saving quiz result:', error);
     }
   };
 
   const clearHistory = async () => {
     try {
-      await AsyncStorage.removeItem("quizHistory");
+      await AsyncStorage.removeItem('quizHistory');
       setQuizHistory([]);
-      Alert.alert("Success", "Quiz history cleared!");
+      Alert.alert('Success', 'Quiz history cleared!');
     } catch (error) {
-      console.error("Error clearing history:", error);
+      console.error('Error clearing history:', error);
     }
   };
 
@@ -98,24 +148,22 @@ export default function App() {
 
   const handleNextQuestion = () => {
     if (selectedAnswer === null) {
-      Alert.alert("Please select an answer");
+      Alert.alert('Please select an answer', 'You must choose an option before proceeding.');
       return;
     }
 
-    // check correctness
+    // Check if answer is correct
     if (selectedAnswer === questions[currentQuestionIndex].correctAnswer) {
       setScore(score + 1);
     }
 
-    // next or finish
+    // Move to next question or show results
     if (currentQuestionIndex + 1 < questions.length) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
     } else {
-      const finalScore =
-        selectedAnswer === questions[currentQuestionIndex].correctAnswer
-          ? score + 1
-          : score;
+      // Quiz completed
+      const finalScore = selectedAnswer === questions[currentQuestionIndex].correctAnswer ? score + 1 : score;
       setScore(finalScore);
       setShowResult(true);
       saveQuizResult(finalScore);
@@ -130,62 +178,127 @@ export default function App() {
     setShowHistory(false);
   };
 
+  const renderOption = ({ item, index }: { item: string; index: number }) => (
+    <TouchableOpacity
+      style={[
+        styles.option,
+        selectedAnswer === index ? styles.selectedOption : styles.unselectedOption
+      ]}
+      onPress={() => handleAnswerSelect(index)}
+    >
+      <Text
+        style={[
+          styles.optionText,
+          selectedAnswer === index ? styles.selectedText : styles.unselectedText
+        ]}
+      >
+        {item}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const renderHistoryItem = ({ item }: { item: QuizResult }) => (
+    <View style={styles.historyItem}>
+      <Text style={styles.historyScore}>
+        Score: {item.score}/{item.totalQuestions}
+      </Text>
+      <Text style={styles.historyDate}>Date: {item.date}</Text>
+      <Text style={styles.historyPercentage}>
+        Percentage: {Math.round((item.score / item.totalQuestions) * 100)}%
+      </Text>
+    </View>
+  );
+
+  // Loading screen
   if (loading) {
     return (
-      <View>
-        <Text>Loading…</Text>
-      </View>
-    );
-  }
-
-  if (questions.length === 0) {
-    return (
-      <View>
-        <Text>No questions available</Text>
-      </View>
-    );
-  }
-
-  if (showResult) {
-    const percentage = Math.round((score / questions.length) * 100);
-    return (
-      <SafeAreaView>
-        <Text>Quiz Complete!</Text>
-        <Text>
-          Score: {score}/{questions.length}
-        </Text>
-        <Text>{percentage}%</Text>
-        <TouchableOpacity onPress={resetQuiz}>
-          <Text>Take Again</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setShowHistory(true)}>
-          <Text>View History</Text>
-        </TouchableOpacity>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Loading Questions...</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
+  // History screen
   if (showHistory) {
     return (
-      <SafeAreaView>
-        <Text>Quiz History</Text>
-        {quizHistory.length > 0 ? (
-          quizHistory.map((item) => (
-            <View key={item.id}>
-              <Text>
-                {item.score}/{item.totalQuestions} on {item.date}
-              </Text>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.content}>
+          <View style={styles.historyHeader}>
+            <Text style={styles.title}>Quiz History</Text>
+            <TouchableOpacity style={styles.clearButton} onPress={clearHistory}>
+              <Text style={styles.buttonText}>Clear All</Text>
+            </TouchableOpacity>
+          </View>
+
+          {quizHistory.length > 0 ? (
+            <FlatList
+              data={quizHistory.slice().reverse()}
+              renderItem={renderHistoryItem}
+              keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : (
+            <View style={styles.emptyHistory}>
+              <Text style={styles.emptyHistoryText}>No quiz history yet!</Text>
+              <Text style={styles.emptyHistorySubtext}>Take a quiz to see your results here.</Text>
             </View>
-          ))
-        ) : (
-          <Text>No history yet</Text>
-        )}
-        <TouchableOpacity onPress={clearHistory}>
-          <Text>Clear All</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setShowHistory(false)}>
-          <Text>Back</Text>
-        </TouchableOpacity>
+          )}
+
+          <TouchableOpacity style={styles.primaryButton} onPress={() => setShowHistory(false)}>
+            <Text style={styles.primaryButtonText}>Back to Quiz</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Result screen
+  if (showResult) {
+    const percentage = Math.round((score / questions.length) * 100);
+    const getMessage = () => {
+      if (percentage >= 80) return "Excellent! 🎉";
+      if (percentage >= 60) return "Good job! 👍";
+      if (percentage >= 40) return "Not bad! 🙂";
+      return "Keep practicing! 💪";
+    };
+
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.resultContainer}>
+          <View style={styles.resultCard}>
+            <Text style={styles.resultTitle}>Quiz Complete!</Text>
+            <Text style={styles.scoreText}>{score}/{questions.length}</Text>
+            <Text style={styles.percentageText}>{percentage}%</Text>
+            <Text style={styles.messageText}>{getMessage()}</Text>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={resetQuiz}>
+              <Text style={styles.primaryButtonText}>Take Quiz Again</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => setShowHistory(true)}>
+              <Text style={styles.primaryButtonText}>View History</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Quiz screen
+  if (questions.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>No questions available!</Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={fetchQuestions}>
+            <Text style={styles.primaryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -193,45 +306,95 @@ export default function App() {
   const currentQuestion = questions[currentQuestionIndex];
 
   return (
-    <SafeAreaView>
-      <Text>
-        Question {currentQuestionIndex + 1} of {questions.length}
-      </Text>
-      <Text>{currentQuestion.question}</Text>
-      {currentQuestion.options.map((opt, i) => (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.content}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Quiz App</Text>
+          <TouchableOpacity style={styles.historyButton} onPress={() => setShowHistory(true)}>
+            <Text style={styles.buttonText}>History</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Progress */}
+        <View style={styles.progressSection}>
+          <Text style={styles.progressText}>
+            Question {currentQuestionIndex + 1} of {questions.length}
+          </Text>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }
+              ]}
+            />
+          </View>
+        </View>
+
+        {/* Score */}
+        <View style={styles.scoreCard}>
+          <Text style={styles.scoreLabel}>
+            Current Score: <Text style={styles.scoreValue}>{score}</Text>
+          </Text>
+        </View>
+
+        {/* Question */}
+        <View style={styles.questionCard}>
+          <Text style={styles.questionText}>{currentQuestion.question}</Text>
+        </View>
+
+        {/* Options List */}
+        <FlatList
+          data={currentQuestion.options}
+          renderItem={renderOption}
+          keyExtractor={(item, index) => index.toString()}
+          showsVerticalScrollIndicator={false}
+          style={styles.optionsList}
+        />
+
+        {/* Next Button */}
         <TouchableOpacity
-          key={i}
-          onPress={() => handleAnswerSelect(i)}
-          style={{
-            backgroundColor: selectedAnswer === i ? "lightblue" : "white",
-          }}
+          style={[
+            styles.nextButton,
+            selectedAnswer !== null ? styles.nextButtonEnabled : styles.nextButtonDisabled
+          ]}
+          onPress={handleNextQuestion}
+          disabled={selectedAnswer === null}
         >
-          <Text>{opt}</Text>
+          <Text style={styles.primaryButtonText}>
+            {currentQuestionIndex + 1 === questions.length ? 'Finish Quiz' : 'Next Question'}
+          </Text>
         </TouchableOpacity>
-      ))}
-      <TouchableOpacity
-        onPress={handleNextQuestion}
-        disabled={selectedAnswer === null}
-      >
-        <Text>
-          {currentQuestionIndex + 1 === questions.length
-            ? "Finish Quiz"
-            : "Next Question"}
-        </Text>
-      </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
-
+// Styles remain the same...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fbf2f278',
+    backgroundColor: '#f9fafb',
   },
   content: {
     flex: 1,
-    padding: 35,
+    padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#4b5563',
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#ef4444',
+    marginBottom: 16,
   },
   header: {
     flexDirection: 'row',
@@ -240,22 +403,21 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 35,
-    fontFamily: 'Poppins',
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#000000ff',
+    color: '#1f2937',
   },
   historyButton: {
-    backgroundColor: '#b941bdff',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: '#6b7280',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   clearButton: {
     backgroundColor: '#ef4444',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   buttonText: {
     color: 'white',
@@ -335,36 +497,30 @@ const styles = StyleSheet.create({
   },
   optionText: {
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   selectedText: {
     color: 'white',
-    fontWeight: '800',
-
   },
   unselectedText: {
     color: '#1f2937',
   },
   nextButton: {
     padding: 16,
-    borderRadius: 15,
-    marginBottom: 25,
-    shadowColor: '#000000ff',
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 2,
+    borderRadius: 8,
+    marginTop: 24,
   },
   nextButtonEnabled: {
     backgroundColor: '#10b981',
   },
   nextButtonDisabled: {
-    backgroundColor: '#8993a2ff',
+    backgroundColor: '#d1d5db',
   },
   primaryButton: {
-    backgroundColor: '#326ecfff',
+    backgroundColor: '#3b82f6',
     padding: 16,
     borderRadius: 8,
-    marginBottom: 30,
+    marginBottom: 12,
   },
   secondaryButton: {
     backgroundColor: '#6b7280',
@@ -376,7 +532,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
     fontSize: 18,
-    marginBottom: 2,
   },
   resultContainer: {
     flex: 1,
@@ -459,7 +614,7 @@ const styles = StyleSheet.create({
   },
   emptyHistoryText: {
     color: '#6b7280',
-    fontSize: 20,
+    fontSize: 18,
   },
   emptyHistorySubtext: {
     color: '#9ca3af',

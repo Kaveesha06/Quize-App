@@ -1,15 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  FlatList,
-  Alert,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  ActivityIndicator,
-} from 'react-native';
+import {View,Text,TouchableOpacity,FlatList,Alert,SafeAreaView,StatusBar,StyleSheet,ActivityIndicator,} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
@@ -37,72 +27,71 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Load quiz history and questions when app starts
+
   useEffect(() => {
     loadQuizHistory();
     fetchQuestions();
   }, []);
 
-  // Fetch questions from your Java servlet
+
+  const setSampleQuestions = ()=> {
+    const sampleQuestions: Question[] = [
+      {
+        id: 1,
+        question: "What is 1 + 1 ?",
+        options: ["1", "11", "2", "10"],
+        correctAnswer: 2,
+      },
+      {
+        id: 2,
+        question: "What is 4 * 11?",
+        options: ["4", "11", "444", "44"],
+        correctAnswer: 3,
+      },
+      {
+        id: 3,
+        question: "What is 2 + 2?",
+        options: ["3", "4", "5", "6"],
+        correctAnswer: 1,
+      },
+      {
+        id: 4,
+        question: "What is 2 * 2?",
+        options: ["2", "4", "22", "6"],
+        correctAnswer: 1,
+      },
+      {
+        id: 5,
+        question: "What is 2 * 10?",
+        options: ["20", "2", "0.2", "200"],
+        correctAnswer: 0,
+      },
+    ];
+    setQuestions(sampleQuestions);
+  };
+
   const fetchQuestions = async () => {
     try {
       setLoading(true);
-      // CHANGE THIS URL to match your server
-      const response = await fetch('https://454c6606ccab.ngrok-free.app/Quize-jsp/Quection');
+      
+      const response = await fetch('https://95833af0d60a.ngrok-free.app/Quize-jsp/Quection');
       
       if (response.ok) {
         const data = await response.json();
         setQuestions(data);
       } else {
-        // If server fails, use sample questions
-        console.log('Server not available, using sample questions');
-        // setSampleQuestions();
+        
+        console.log(' "500" Server error occurred !!');
+        setSampleQuestions();
       }
     } catch (error) {
       console.error('Error fetching questions:', error);
-      // If network fails, use sample questions
-      // setSampleQuestions();
+
     } finally {
       setLoading(false);
     }
   };
 
-  // // Sample questions if server is not available
-  // const setSampleQuestions = () => {
-  //   const sampleQuestions: Question[] = [
-  //     {
-  //       id: 1,
-  //       question: "What is the capital of France?",
-  //       options: ["London", "Berlin", "Paris", "Madrid"],
-  //       correctAnswer: 2,
-  //     },
-  //     {
-  //       id: 2,
-  //       question: "Which planet is known as the Red Planet?",
-  //       options: ["Venus", "Mars", "Jupiter", "Saturn"],
-  //       correctAnswer: 1,
-  //     },
-  //     {
-  //       id: 3,
-  //       question: "What is 2 + 2?",
-  //       options: ["3", "4", "5", "6"],
-  //       correctAnswer: 1,
-  //     },
-  //     {
-  //       id: 4,
-  //       question: "Who painted the Mona Lisa?",
-  //       options: ["Van Gogh", "Picasso", "Leonardo da Vinci", "Michelangelo"],
-  //       correctAnswer: 2,
-  //     },
-  //     {
-  //       id: 5,
-  //       question: "What is the largest ocean on Earth?",
-  //       options: ["Atlantic", "Indian", "Arctic", "Pacific"],
-  //       correctAnswer: 3,
-  //     },
-  //   ];
-  //   setQuestions(sampleQuestions);
-  // };
 
   const loadQuizHistory = async () => {
     try {
@@ -133,13 +122,9 @@ export default function App() {
   };
 
   const clearHistory = async () => {
-    try {
       await AsyncStorage.removeItem('quizHistory');
       setQuizHistory([]);
       Alert.alert('Success', 'Quiz history cleared!');
-    } catch (error) {
-      console.error('Error clearing history:', error);
-    }
   };
 
   const handleAnswerSelect = (answerIndex: number) => {
@@ -152,17 +137,17 @@ export default function App() {
       return;
     }
 
-    // Check if answer is correct
+    
     if (selectedAnswer === questions[currentQuestionIndex].correctAnswer) {
       setScore(score + 1);
     }
 
-    // Move to next question or show results
+    
     if (currentQuestionIndex + 1 < questions.length) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
     } else {
-      // Quiz completed
+      
       const finalScore = selectedAnswer === questions[currentQuestionIndex].correctAnswer ? score + 1 : score;
       setScore(finalScore);
       setShowResult(true);
@@ -209,7 +194,7 @@ export default function App() {
     </View>
   );
 
-  // Loading screen
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -221,7 +206,7 @@ export default function App() {
     );
   }
 
-  // History screen
+  
   if (showHistory) {
     return (
       <SafeAreaView style={styles.container}>
@@ -243,8 +228,8 @@ export default function App() {
             />
           ) : (
             <View style={styles.emptyHistory}>
-              <Text style={styles.emptyHistoryText}>No quiz history yet!</Text>
-              <Text style={styles.emptyHistorySubtext}>Take a quiz to see your results here.</Text>
+              <Text style={styles.emptyHistoryText}>No history available!</Text>
+              <Text style={styles.emptyHistorySubtext}>Go to Quiz</Text>
             </View>
           )}
 
@@ -256,14 +241,14 @@ export default function App() {
     );
   }
 
-  // Result screen
+  
   if (showResult) {
     const percentage = Math.round((score / questions.length) * 100);
     const getMessage = () => {
-      if (percentage >= 80) return "Excellent! 🎉";
-      if (percentage >= 60) return "Good job! 👍";
-      if (percentage >= 40) return "Not bad! 🙂";
-      return "Keep practicing! 💪";
+      if (percentage >= 85) return "Excellent!";
+      if (percentage >= 55) return "Good job!";
+      if (percentage >= 35) return "Not bad!";
+      return "Keep practicing!";
     };
 
     return (
@@ -289,7 +274,7 @@ export default function App() {
     );
   }
 
-  // Quiz screen
+  
   if (questions.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
@@ -371,15 +356,15 @@ export default function App() {
   );
 }
 
-// Styles remain the same...
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#eee3e3ff',
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -387,14 +372,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#4b5563',
+    marginTop: 20,
+    fontSize: 20,
+    color: '#2b26c9ff',
   },
   errorText: {
-    fontSize: 18,
+    fontSize: 20,
+    fontStyle: 'italic',
     color: '#ef4444',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   header: {
     flexDirection: 'row',
@@ -403,25 +389,30 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 24,
+    fontSize: 35,
     fontWeight: 'bold',
     color: '#1f2937',
+    marginTop: 20,
   },
   historyButton: {
-    backgroundColor: '#6b7280',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: '#313f5ab5',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 20,
   },
   clearButton: {
     backgroundColor: '#ef4444',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 20,
   },
   buttonText: {
     color: 'white',
-    fontWeight: '500',
+    fontWeight: '600',
+    
+
   },
   progressSection: {
     marginBottom: 24,
@@ -442,15 +433,16 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   scoreCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#63ce48ff',
     padding: 16,
-    borderRadius: 8,
-    marginBottom: 24,
+    borderRadius: 10,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 1,
     shadowRadius: 2,
     elevation: 2,
+    fontWeight: 'bold',
   },
   scoreLabel: {
     textAlign: 'center',
@@ -458,10 +450,11 @@ const styles = StyleSheet.create({
   },
   scoreValue: {
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: '#f63b3bff',
+    fontSize: 16,
   },
   questionCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#87d1e1ff',
     padding: 24,
     borderRadius: 12,
     marginBottom: 24,
@@ -488,19 +481,24 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   selectedOption: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#2563eb',
+    backgroundColor: '#2b34d4ff',
+    borderColor: '#000000ff',
+    fontSize: 18,
+    fontWeight: '600',
+    fontFamily: 'Arial',
+    color: '#ffffff', 
+
   },
   unselectedOption: {
     backgroundColor: '#f3f4f6',
-    borderColor: '#d1d5db',
+    borderColor: '#988b8bff',
   },
   optionText: {
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   selectedText: {
-    color: 'white',
+    color: '#ffffff',
   },
   unselectedText: {
     color: '#1f2937',
@@ -509,6 +507,16 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     marginTop: 24,
+    marginBottom: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    fontWeight: 'bold',
+    fontSize: 18,
   },
   nextButtonEnabled: {
     backgroundColor: '#10b981',
@@ -544,7 +552,6 @@ const styles = StyleSheet.create({
     padding: 32,
     borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
@@ -602,10 +609,10 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   historyDate: {
-    color: '#4b5563',
+    color: '#5a606aff',
   },
   historyPercentage: {
-    color: '#4b5563',
+    color: '#575d66ff',
   },
   emptyHistory: {
     flex: 1,
